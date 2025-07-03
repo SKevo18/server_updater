@@ -1,0 +1,41 @@
+{
+    "server": {
+        "loader": "paper",
+        "loaderVersion": "@latest",
+        "minecraftVersion": "1.21.7",
+        "supports": [
+            "plugins"
+        ]
+    },
+    "plugins": [
+        {
+            "saveAs": "ViaVersion-{version}.jar",
+            "version": "4.11.1",
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "viaversion"
+                }
+            }
+        },
+        {
+            "saveAs": "Typewriter-{version}.jar",
+            "version": "@latest",
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "typewriter"
+                },
+                "plugin.typewriter": {
+                    "extensions": [
+                        "BasicExtension",
+                        "CitizensExtension",
+                        "EntityExtension",
+                        "QuestExtension",
+                        "RoadNetworkExtension",
+                        "WorldGuardExtension"
+                    ]
+                }
+            }
+        }
+    ],
+    "mods": []
+}
