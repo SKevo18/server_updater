@@ -4,6 +4,10 @@ on:
     release:
         types: [created]
 
+permissions:
+    contents: write
+    packages: write
+
 jobs:
     build:
         name: Build binaries
@@ -50,11 +54,6 @@ jobs:
                   go build -ldflags="-s -w" -o dist/server_updater-${{ matrix.platform }}${{ matrix.extension }} .
 
             - name: Upload binary to release
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              uses: softprops/action-gh-release@v2
               with:
-                  upload_url: ${{ github.event.release.upload_url }}
-                  asset_path: ./dist/server_updater-${{ matrix.platform }}${{ matrix.extension }}
-                  asset_name: server_updater-${{ matrix.platform }}${{ matrix.extension }}
-                  asset_content_type: application/octet-stream
+                  files: ./dist/server_updater-${{ matrix.platform }}${{ matrix.extension }}
