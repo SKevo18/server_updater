@@ -15,3 +15,9 @@ This tool aims to make updating your server and plugins/mods as easy as possible
   - [x] Choose a specific or latest version of the plugin
 - [x] Manifest file for server and plugin definitions
 - [x] Cache file to record current versions
+
+## Usage
+
+See [`example_server_manifest.json`](example_server_manifest.json) for an example of a server manifest.
+
+Download from [releases](https://github.com/SKevo18/server_updater/releases)
