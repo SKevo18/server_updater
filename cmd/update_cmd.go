@@ -17,7 +17,7 @@ import (
 
 var configFilePath string
 
-const cacheFileName = ".updater-cache.json"
+const cacheFileName = "updater_cache.json"
 
 func init() {
 	updateCmd.Flags().StringVarP(&configFilePath, "config", "c", "server_manifest.json", "Path to a manifest file")
