@@ -7,7 +7,22 @@ type Dependency struct {
 	SaveAs string `json:"saveAs"`
 
 	// Wanted version, can be "@latest" to get the latest version
-	Version string `json:"version"`
+	WantedVersion string `json:"version"`
+
+	// Download even if MC version or loader doesn't match
+	DownloadIncompatible bool `json:"downloadIncompatible"`
+
+	// ProjectId of the dependency, used for Modrinth API calls
+	ProjectId string `json:"-"`
+
+	// Actual version downloaded from the Modrinth API
+	Version string `json:"-"`
+
+	// File name of the downloaded file
+	FileName string `json:"-"`
+
+	// Hash of the downloaded file
+	FileHash string `json:"-"`
 
 	// Metadata for the dependency
 	Metadata map[string]any `json:"metadata"`

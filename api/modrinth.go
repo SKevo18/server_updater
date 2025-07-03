@@ -1,11 +1,15 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
-	"slices"
 
 	"github.com/SKevo18/server_updater/manifest"
+	log "github.com/gwillem/go-simplelog"
 )
 
 var CanonicalModrinthApiUrl = getModrinthApiUrl()
@@ -22,172 +26,169 @@ func getModrinthApiUrl() string {
 	return apiUrlRoot
 }
 
-// FindModrinthVersionFor finds the appropriate version of a plugin/mod for a specific server type and game version
-func FindModrinthVersionFor(projectIdOrSlug string, wantedVersion string, server manifest.Server) (*manifest.Dependency, error) {
-	versions, err := FetchJsonArray(fmt.Sprintf("%s/project/%s/version", CanonicalModrinthApiUrl, projectIdOrSlug))
+// GetProject gets a project from the Modrinth API
+func GetProject(projectIdOrSlug string) (*ModrinthProject, error) {
+	var project ModrinthProject
+	err := get(fmt.Sprintf("%s/project/%s", CanonicalModrinthApiUrl, projectIdOrSlug), &project)
+	return &project, err
+}
+
+// GetVersionsFor gets all versions of a project
+func GetVersionsFor(project *ModrinthProject, server manifest.Server) ([]ModrinthVersion, error) {
+	var versions []ModrinthVersion
+
+	// Properly encode query parameters
+	params := url.Values{}
+	params.Add("loaders", fmt.Sprintf("[\"%s\"]", server.Loader))
+	params.Add("game_versions", fmt.Sprintf("[\"%s\"]", server.MinecraftVersion))
+
+	requestUrl := fmt.Sprintf("%s/project/%s/version?%s",
+		CanonicalModrinthApiUrl,
+		project.ID,
+		params.Encode(),
+	)
+
+	err := get(requestUrl, &versions)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, version := range versions {
-		versionMap, ok := version.(jsonMapResponse)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert version from Modrinth API: `%v` is `%T`, want `map[string]interface{}`", version, version)
-		}
-
-		dependency, err := getModrinthDependencyFromVersion(versionMap, wantedVersion, server)
-		if err != nil {
-			return nil, err
-		}
-		if dependency != nil {
-			return dependency, nil
-		}
-	}
-
-	return nil, nil
+	return versions, nil
 }
 
-// getModrinthDependencyFromVersion gets the dependency from a version map,
-// returns nil if the version is not found
-func getModrinthDependencyFromVersion(versionMap jsonMapResponse, wantedVersion string, server manifest.Server) (*manifest.Dependency, error) {
-	var dependency *manifest.Dependency
+// GetAllVersionsFor gets all versions of a project without compatibility filtering
+func GetAllVersionsFor(project *ModrinthProject) ([]ModrinthVersion, error) {
+	var versions []ModrinthVersion
 
-	loaders := make([]string, 0, len(versionMap["loaders"].([]any)))
-	for _, rawLoader := range versionMap["loaders"].([]any) {
-		loader, ok := rawLoader.(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert loader from Modrinth API: `%v` is `%T`, want `string`", rawLoader, rawLoader)
-		}
-		loaders = append(loaders, loader)
-	}
+	requestUrl := fmt.Sprintf("%s/project/%s/version",
+		CanonicalModrinthApiUrl,
+		project.ID,
+	)
 
-	if slices.Contains(loaders, server.Loader) {
-		// loader matches, check MC version
-		gameVersions := make([]string, 0, len(versionMap["game_versions"].([]any)))
-		for _, rawGameVersion := range versionMap["game_versions"].([]any) {
-			gameVersion, ok := rawGameVersion.(string)
-			if !ok {
-				return nil, fmt.Errorf("failed to convert game version from Modrinth API: `%v` is `%T`, want `string`", rawGameVersion, rawGameVersion)
-			}
-			gameVersions = append(gameVersions, gameVersion)
-		}
-
-		if slices.Contains(gameVersions, server.MinecraftVersion) {
-			switch wantedVersion {
-			case "@latest":
-				// latest version is on the top of the list, so we can return it
-				dependency = &manifest.Dependency{
-					Version: versionMap["version_number"].(string),
-				}
-			case "@latestStable":
-				// latest stable ("release")
-				if versionMap["version_type"] == "release" {
-					dependency = &manifest.Dependency{
-						Version: versionMap["version_number"].(string),
-					}
-				}
-			case versionMap["version_number"]:
-				// exact match
-				dependency = &manifest.Dependency{
-					Version: versionMap["version_number"].(string),
-				}
-			default:
-				return nil, nil
-			}
-
-			// find required dependencies
-			requiredDependencies, err := findModrinthRequiredDependencies(versionMap["dependencies"], server)
-			if err != nil {
-				return nil, err
-			}
-			dependency.Dependencies = requiredDependencies
-
-			// find download URL
-			downloadUrl, err := getModrinthDownloadUrl(versionMap["files"])
-			if err != nil {
-				return nil, err
-			}
-			dependency.DownloadUrl = downloadUrl
-
-			return dependency, nil
-		}
-	}
-
-	return nil, nil
-}
-
-// fetchModrinthVersion fetches a raw version JSON data from the Modrinth API
-func fetchModrinthVersion(versionId string) (jsonMapResponse, error) {
-	versionMap, err := FetchJsonObject(fmt.Sprintf("%s/version/%s", CanonicalModrinthApiUrl, versionId))
+	err := get(requestUrl, &versions)
 	if err != nil {
 		return nil, err
 	}
-	return versionMap, nil
+
+	return versions, nil
 }
 
-// findModrinthRequiredDependencies finds the required dependencies of another dependency,
-// returns nil if there are no required dependencies
-func findModrinthRequiredDependencies(rawDependencies any, server manifest.Server) ([]*manifest.Dependency, error) {
-	dependenciesArray, ok := rawDependencies.(jsonListResponse)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert dependencies from Modrinth API: `%v` is `%T`, want `[]map[string]interface{}`", rawDependencies, rawDependencies)
+// GetVersion gets a specific version from the Modrinth API
+func GetVersion(versionId string) (*ModrinthVersion, error) {
+	var version ModrinthVersion
+	err := get(fmt.Sprintf("%s/version/%s", CanonicalModrinthApiUrl, versionId), &version)
+	return &version, err
+}
+
+// ResolveVersion resolves the wanted version string to a specific ModrinthVersion
+func ResolveVersion(versions []ModrinthVersion, wantedVersion string) *ModrinthVersion {
+	if wantedVersion == "@latest" {
+		return &versions[0]
 	}
 
-	dependencies := []*manifest.Dependency{}
-	for _, rawDependency := range dependenciesArray {
-		dependencyMap, ok := rawDependency.(jsonMapResponse)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert dependency from Modrinth API: `%v` is `%T`, want `map[string]interface{}`", rawDependency, rawDependency)
+	for _, v := range versions {
+		if v.VersionNumber == wantedVersion {
+			return &v
 		}
+	}
+	return nil
+}
 
-		if dependencyMap["dependency_type"] == "required" {
-			versionId, ok := dependencyMap["version_id"].(string)
-			if !ok {
-				return nil, fmt.Errorf("failed to convert version id from Modrinth API: `%v` is `%T`, want `string`", dependencyMap["version_id"], dependencyMap["version_id"])
+// GetRequiredDependencies gets the required dependencies for a version
+func GetRequiredDependencies(version *ModrinthVersion, server manifest.Server, downloadIncompatible bool) ([]*manifest.Dependency, error) {
+	deps := make([]*manifest.Dependency, 0)
+	for _, dep := range version.Dependencies {
+		if dep.DependencyType == "required" {
+			if dep.ProjectID == nil {
+				log.Warn("Skipping dependency with no project ID")
+				continue
 			}
 
-			rawDependencyVersion, err := fetchModrinthVersion(versionId)
+			depProject, err := GetProject(*dep.ProjectID)
 			if err != nil {
 				return nil, err
 			}
 
-			dependency, err := getModrinthDependencyFromVersion(rawDependencyVersion, "@latest", server)
+			var depVersions []ModrinthVersion
+			if downloadIncompatible {
+				depVersions, err = GetAllVersionsFor(depProject)
+			} else {
+				depVersions, err = GetVersionsFor(depProject, server)
+			}
+
 			if err != nil {
 				return nil, err
 			}
+			if len(depVersions) == 0 {
+				log.Warn(fmt.Sprintf("No versions found for dependency %s", depProject.Title))
+				continue
+			}
 
-			dependencies = append(dependencies, dependency)
+			// We just take the latest compatible version for the dependency
+			depVersion := ResolveVersion(depVersions, "@latest")
+
+			var primaryFile *ModrinthFile
+			for _, f := range depVersion.Files {
+				if f.Primary {
+					primaryFile = &f
+					break
+				}
+			}
+
+			if primaryFile == nil {
+				log.Warn(fmt.Sprintf("No primary file found for dependency %s", depProject.Title))
+				continue
+			}
+
+			newDep := &manifest.Dependency{
+				ProjectId:            depProject.ID,
+				Version:              depVersion.VersionNumber,
+				WantedVersion:        depVersion.VersionNumber,
+				FileName:             primaryFile.Filename,
+				FileHash:             primaryFile.Hashes["sha512"],
+				DownloadUrl:          primaryFile.URL,
+				SaveAs:               primaryFile.Filename, // Dependencies are saved as their original filename
+				DownloadIncompatible: downloadIncompatible, // Inherit from parent
+				Metadata: map[string]any{
+					"source.modrinth": map[string]any{
+						"projectId": depProject.ID,
+					},
+				},
+			}
+			newDep.Dependencies, err = GetRequiredDependencies(depVersion, server, downloadIncompatible)
+			if err != nil {
+				return nil, err
+			}
+			deps = append(deps, newDep)
 		}
 	}
-
-	if len(dependencies) == 0 {
-		return nil, nil
-	}
-
-	return dependencies, nil
+	return deps, nil
 }
 
-// getModrinthDownloadUrl obtains the download URL of a dependency from raw files data
-func getModrinthDownloadUrl(rawFiles any) (string, error) {
-	filesArray, ok := rawFiles.(jsonListResponse)
-	if !ok {
-		return "", fmt.Errorf("failed to convert files from Modrinth API: `%v` is `%T`, want `[]map[string]interface{}`", rawFiles, rawFiles)
+// DownloadFile downloads a file from a URL to a specific path
+func DownloadFile(url, path string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
 	}
+	defer resp.Body.Close()
 
-	for _, rawFile := range filesArray {
-		file, ok := rawFile.(jsonMapResponse)
-		if !ok {
-			return "", fmt.Errorf("failed to convert file from Modrinth API: `%v` is `%T`, want `map[string]interface{}`", rawFile, rawFile)
-		}
-
-		if file["primary"] == true {
-			downloadUrl, ok := file["url"].(string)
-			if !ok {
-				return "", fmt.Errorf("failed to convert download url from Modrinth API: `%v` is `%T`, want `string`", file["url"], file["url"])
-			}
-			return downloadUrl, nil
-		}
+	out, err := os.Create(path)
+	if err != nil {
+		return err
 	}
+	defer out.Close()
 
-	return "", fmt.Errorf("no primary file found")
+	_, err = io.Copy(out, resp.Body)
+	return err
+}
+
+func get(url string, target any) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return json.NewDecoder(resp.Body).Decode(target)
 }

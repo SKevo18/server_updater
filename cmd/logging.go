@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	log "github.com/SKevo18/go-simplelog"
+	log "github.com/gwillem/go-simplelog"
 	"github.com/spf13/cobra"
 )
 
@@ -11,7 +11,7 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().IntVarP(&verbosity, "verbosity", "v", 2, "Verbosity level (0=debug, 1=task, 2=warn, 3=alert, 4=error)")
+	rootCmd.PersistentFlags().IntVarP(&verbosity, "verbosity", "v", 1, "Verbosity level (0=debug, 1=task, 2=warn, 3=alert, 4=error)")
 	rootCmd.PersistentFlags().BoolVarP(&silent, "silent", "s", false, "Silent mode - no log output")
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {

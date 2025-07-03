@@ -1,7 +1,16 @@
 {
+    "this is optional": "remove ftp section if you don't want to use ftp:",
+    "ftp": {
+        "host": "host",
+        "port": 21,
+        "username": "user",
+        "password": "pass",
+        "remotePath": "/"
+    },
     "server": {
         "loader": "paper",
         "loaderVersion": "@latest",
+        "loaderFile": "paper-{loaderVersion}.jar",
         "minecraftVersion": "1.21.7",
         "supports": [
             "plugins"
@@ -9,17 +18,99 @@
     },
     "plugins": [
         {
-            "saveAs": "ViaVersion-{version}.jar",
-            "version": "4.11.1",
+            "saveAs": "FancyHolograms-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": false,
             "metadata": {
                 "source.modrinth": {
-                    "projectId": "viaversion"
+                    "projectId": "fancyholograms"
+                }
+            }
+        },
+        {
+            "saveAs": "ImageFrame-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": false,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "imageframe"
+                }
+            }
+        },
+        {
+            "saveAs": "ItemEdit-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "itemedit"
+                }
+            }
+        },
+        {
+            "saveAs": "Multiverse-Core-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "multiverse-core"
+                }
+            }
+        },
+        {
+            "saveAs": "Multiverse-Inventories-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "multiverse-inventories"
+                }
+            }
+        },
+        {
+            "saveAs": "PlaceholderAPI-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.hangar": {
+                    "projectId": "placeholderapi"
+                }
+            }
+        },
+        {
+            "saveAs": "Plan-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "plan"
+                }
+            }
+        },
+        {
+            "saveAs": "SeeMore-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "seemore" 
+                }
+            }
+        },
+        {
+            "saveAs": "TAB-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": false,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "tab-was-taken"
                 }
             }
         },
         {
             "saveAs": "Typewriter-{version}.jar",
             "version": "@latest",
+            "downloadIncompatible": true,
             "metadata": {
                 "source.modrinth": {
                     "projectId": "typewriter"
@@ -33,6 +124,46 @@
                         "RoadNetworkExtension",
                         "WorldGuardExtension"
                     ]
+                }
+            }
+        },
+        {
+            "saveAs": "ViaVersion-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": false,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "viaversion"
+                }
+            }
+        },
+        {
+            "saveAs": "ViaBackwards-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": false,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "viabackwards"
+                }
+            }
+        },
+        {
+            "saveAs": "WorldEdit-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": false,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "WorldEdit"
+                }
+            }
+        },
+        {
+            "saveAs": "WorldGuard-{version}.jar",
+            "version": "@latest",
+            "downloadIncompatible": true,
+            "metadata": {
+                "source.modrinth": {
+                    "projectId": "worldguard"
                 }
             }
         }
