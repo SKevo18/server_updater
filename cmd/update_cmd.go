@@ -433,7 +433,7 @@ func downloadAndPlace(dep *manifest.Dependency, dest string, rootDir string, ftp
 			return nil
 		}
 		// Remove old file
-		log.Task(fmt.Sprintf("Removing old version: %s", oldFile))
+		log.Task(fmt.Sprintf("Purging old %s", filepath.Base(oldFile)))
 		removeFile(oldFile, ftpClient)
 	}
 
@@ -565,13 +565,24 @@ func writeCache(rootDir string, ftpClient *ftp.ServerConn, cache map[string]stri
 func removeFile(path string, ftpClient *ftp.ServerConn) {
 	var err error
 	if ftpClient != nil {
-		// Use forward slashes for FTP paths
 		ftpPath := filepath.ToSlash(path)
+
+		if currentDir, pwdErr := ftpClient.CurrentDir(); pwdErr == nil {
+			log.Debug(fmt.Sprintf("FTP current directory: %s, attempting to delete: %s", currentDir, ftpPath))
+		}
+
 		err = ftpClient.Delete(ftpPath)
+		if err != nil {
+			log.Warn(fmt.Sprintf("Failed to remove old file %s: %s", ftpPath, err))
+		} else {
+			log.Debug(fmt.Sprintf("Successfully removed %s", filepath.Base(ftpPath)))
+		}
 	} else {
 		err = os.Remove(path)
-	}
-	if err != nil {
-		log.Warn(fmt.Sprintf("Failed to remove old file %s: %s", path, err))
+		if err != nil {
+			log.Warn(fmt.Sprintf("Failed to remove old file %s: %s", path, err))
+		} else {
+			log.Debug(fmt.Sprintf("Successfully removed %s", filepath.Base(path)))
+		}
 	}
 }
